@@ -2437,3 +2437,477 @@ function showTurnBanner(turnNum) {
 }
 
     
+
+// ══════════════════════════════════════════════════════════════════
+// TURNO NOVO — campo limpo
+// Responsabilidade: organizar, draw, iniciativa, firstTurn, banner.
+// Nada de tick, status, cooldown ou passiva de personagem aqui.
+// ══════════════════════════════════════════════════════════════════
+// ── tickJudgeStart — Reseta o Juiz e inicia o watchdog ──────────────────────
+function tickJudgeStart() {
+  judgeWatchdogStart();
+  judgeReset();
+  addLog(`🔍 JUIZ (tickJudgeStart): Turno ${G.turn + 1} — watchdog iniciado, campo limpo.`, 'sys');
+}
+
+// ── tickTurnDraw — Compra de cartas para ambos os lados ─────────────────────
+function tickTurnDraw() {
+  draw('p1'); draw('p2');
+  floatTurnDraw('p1');
+  floatTurnDraw('p2');
+  addLog(`🔍 JUIZ (tickTurnDraw): Draw realizado — P1: ${G.p1.hand.length} cartas | P2: ${G.p2.hand.length} cartas.`, 'sys');
+}
+
+// ── tickInitiative — Monta a fila de iniciativa do turno ────────────────────
+// Retorna false se não há ninguém vivo (fim de jogo).
+function tickInitiative() {
+  G.orderIdx = 0;
+  G.order = G.order.filter(e => e.ch.alive && !e.extra);
+  if(!G.order.length) { checkWin(); return false; }
+  const ordemLog = G.order.map((e,i) => `#${i+1} ${e.ch.name}`).join(', ');
+  addLog(`🔍 JUIZ (tickInitiative): Ordem — ${ordemLog}`, 'sys');
+  return true;
+}
+
+// ── tickGlobalFlags — Incrementa turno e limpa flags globais ────────────────
+function tickGlobalFlags() {
+  G.turn++;
+  addLog(`═══ Turno ${G.turn} ═══`, 'sys');
+  addLog(`🔍 JUIZ (tickGlobalFlags): Turno ${G.turn} — firstTurn desativado para todos.`, 'sys');
+  [...G.p1.chars, ...G.p2.chars].forEach(ch => { ch.firstTurn = false; });
+}
+
+// ── startTurnNew — Orquestrador do turno ────────────────────────────────────
+function startTurnNew() {
+  if(G.over) { judgeWatchdogStop(); return; }
+
+  tickJudgeStart();
+  tickTurnDraw();
+  tickGlobalFlags();
+  if(!tickInitiative()) return; // sem atores vivos — checkWin já chamado
+
+  // Banner e passa para a rodada do primeiro ator
+  showTurnBanner(G.turn).then(() => {
+    if(!G.over) {
+      render();
+      setTimeout(() => { if(!G.over) applyTurnStart(actor()); }, 80);
+    }
+  });
+}
+
+// ── Frozen / Stun — teste unificado ──────────────────────────────────────────
+// Contexto: 'turn' = início de turno normal/extra | 'quick' = após ação rápida
+// Retorna: 'lost' (sucesso: perde turno) | 'ok' (falha: age normalmente) | null (sem status)
+function checkFrozenStun(ch, a, ctx) {
+  const s = ch.statuses.find(s => s.id==='frozen' || s.id==='stun');
+  if(!s) return null;
+  const isFrozen = s.id==='frozen';
+  const icon  = isFrozen ? '❄️' : '💫';
+  const label = isFrozen ? 'Congelado' : 'Atordoado';
+  const color = isFrozen ? '#80d0ff' : '#f0e060';
+  const sucesso = Math.random() < 0.5;
+  if(sucesso) {
+    // Remove status — saiu do efeito mas perde o turno/ação
+    ch.statuses = ch.statuses.filter(s2=>s2.id!==s.id);
+    if(ctx==='quick') {
+      // Ação Rápida: executa a habilidade e DEPOIS encerra o turno
+      // (sinaliza para o chamador encerrar após execução)
+      addLog(icon+' '+ch.name+' '+label+' — status removido! Turno encerrado após esta ação.','dmg');
+      floatStatus(ch, icon+' Último ato!', color);
+      return 'lost_after'; // encerra após executar
+    } else {
+      // Turno normal/extra: encerra imediatamente
+      addLog(icon+' '+ch.name+' '+label+' — perde o turno! Status removido.','dmg');
+      floatStatus(ch, icon+' Perdeu turno!', color);
+      render();
+      setTimeout(()=>{ if(!G.over){ nextActor(); render(); } }, 1200);
+      return 'lost';
+    }
+  } else {
+    // Falha: age normalmente, status permanece
+    addLog(icon+' '+ch.name+' '+label+' — resistiu. Age normalmente. (status permanece)','info');
+    floatStatus(ch, icon+' Resistiu!', color);
+    return 'ok';
+  }
+}
+
+
+// ── CHAMADO DA TROPA (Comandante Vance) ──
+// Dispara nos turnos 3, 6, 9... Sorteia 1 de 3 aliados:
+// Jennet (33%): Sangramento em todos inimigos + Hemorragia dispara tick de Sangramento sem remover
+// Hoover  (33%): 10 dano fixo Ignora Armadura em todos os inimigos
+// Guinzu  (33%): Imagem Espelhada em todos os aliados (50% esquiva 1 ataque)
+function chamadoDoComando(ch) {
+  const enemies = (ch.owner==='p1' ? G.p2 : G.p1).chars.filter(e=>e.alive);
+  const allies  = G[ch.owner].chars.filter(a=>a.alive && a!==ch);
+  const r = Math.random();
+
+  if(r < 0.3333) {
+    // JENNET
+    addLog('🩸 Chamado da Tropa — INFILTRAÇÃO: Sangramento + Hemorragia em todos os inimigos!','dmg');
+    floatStatus(ch,'🩸 Jennet!','#cc2020');
+    for(const e of enemies) {
+      // 1. Sangramento entra primeiro
+      addSt(e,{id:'bleed',icon:'🩸',label:'Sangramento',turns:2,stacks:1,stackMax:3});
+      addLog(`  🩸 ${e.name}: Sangramento aplicado.`,'dmg');
+      // 2. Hemorragia dispara tick de Sangramento sem remover
+      const bleedSt = e.statuses.find(s=>s.id==='bleed');
+      const stacks = bleedSt ? (bleedSt.stacks||1) : 1;
+      const hDmg = 3 * stacks;
+      dmgChar(e, hDmg, ch);
+      floatDmg(e, hDmg);
+      floatStatus(e,'🩸💥 Hemorragia!','#aa0000');
+      addLog(`  🩸💥 Hemorragia: ${hDmg} dano instantâneo em ${e.name} (${stacks} stack(s))! Sangramento mantido.`,'dmg');
+    }
+  } else if(r < 0.6666) {
+    // HOOVER
+    addLog('💥 Chamado da Tropa — INFANTARIA: 10 dano Ignora Armadura em todos os inimigos!','dmg');
+    floatStatus(ch,'💥 Hoover!','#ff8020');
+    for(const e of enemies) {
+      dmgChar(e, 10, ch);
+      floatDmg(e, 10);
+      floatStatus(e,'💥 Hoover!','#ff8020');
+      addLog(`  💥 Hoover → ${e.name}: 10 dano [Ignora Armadura]`,'dmg');
+    }
+  } else {
+    // GUINZU
+    addLog('🧸 Chamado da Tropa — RESGATE: Imagem Espelhada em todos os aliados!','info');
+    floatStatus(ch,'🧸 Guinzu!','#80c0ff');
+    const targets = allies.length ? allies : [ch]; // no 1x1 aplica no próprio Cap
+    for(const a of targets) {
+      addSt(a,{id:'mirror',icon:'🧸',label:'Imagem Espelhada',turns:2});
+      floatStatus(a,'🧸 Espelhada!','#80c0ff');
+      addLog(`  🧸 Imagem Espelhada em ${a.name}!`,'info');
+    }
+  }
+  render();
+}
+
+// Helper: retorna o id do artefato equipado no personagem, ou null
+function _getCharArtefato(charId) {
+  if (!_equipData[charId] || !_equipData[charId].slot2) return null;
+  return _equipData[charId].slot2.artefatoId || null;
+}
+
+// ══ CAPACETE DA VISÃO CÓSMICA — lógica do popup ══
+var _capaceteCallback = null;
+var _capaceteSelectedIdx = null;
+
+function _capaceteHasArt(ch) {
+  if (ch.owner === 'p1' && _equipLoaded) {
+    if (_getCharArtefato(ch.id) === 'art_capacete_visao_cosmica') return true;
+  }
+  if (ch.isBoss && window._survBossArtefato && window._survBossArtefato.id === 'art_capacete_visao_cosmica') return true;
+  return false;
+}
+
+// Abre popup pro jogador (p1) escolher carta a descartar
+function _capaceteOpenPopup(a, onDone) {
+  _capaceteCallback = onDone;
+  _capaceteSelectedIdx = null;
+  var hand = G.p1.hand;
+  var container = document.getElementById('capacete-cards');
+  var btn = document.getElementById('capacete-confirm-btn');
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+  btn.style.cursor = 'not-allowed';
+
+  container.innerHTML = hand.map(function(c, i) {
+    var suitIcon = {spades:'♠',hearts:'♥',clubs:'♣',diamonds:'♦',neutral:'★'}[c.suit] || '?';
+    var suitColor = (c.suit==='hearts'||c.suit==='diamonds') ? '#e04040' : (c.suit==='neutral' ? '#c9a84c' : 'var(--text)');
+    return '<div id="cap-card-' + i + '" onclick="_capaceteSelectCard(' + i + ')" style="' +
+      'width:52px;height:72px;border-radius:8px;border:2px solid var(--border);background:var(--bg3);' +
+      'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;' +
+      'transition:border-color 0.15s,transform 0.15s;user-select:none">' +
+      '<div style="font-size:18px;color:' + suitColor + '">' + suitIcon + '</div>' +
+      '<div style="font-family:\'Cinzel\',serif;font-size:13px;color:var(--gold)">' + c.val + '</div>' +
+    '</div>';
+  }).join('');
+
+  var ov = document.getElementById('capacete-overlay');
+  ov.style.display = 'flex';
+}
+
+function _capaceteSelectCard(idx) {
+  _capaceteSelectedIdx = idx;
+  // Atualiza visual de seleção
+  var hand = G.p1.hand;
+  hand.forEach(function(_, i) {
+    var el = document.getElementById('cap-card-' + i);
+    if (!el) return;
+    el.style.borderColor = (i === idx) ? '#9060d0' : 'var(--border)';
+    el.style.transform = (i === idx) ? 'scale(1.08)' : 'scale(1)';
+    el.style.background = (i === idx) ? 'rgba(144,96,208,0.2)' : 'var(--bg3)';
+  });
+  var btn = document.getElementById('capacete-confirm-btn');
+  btn.disabled = false;
+  btn.style.opacity = '1';
+  btn.style.cursor = 'pointer';
+}
+
+function _capaceteConfirm() {
+  if (_capaceteSelectedIdx === null) return;
+  var ov = document.getElementById('capacete-overlay');
+  ov.style.display = 'none';
+  var ch = G.order[G.orderIdx].ch;
+  addLog('🌌 Capacete da Visão Cósmica: ' + ch.name + ' descartou carta [' + G.p1.hand[_capaceteSelectedIdx].val + '] e compra 2!', 'info');
+  floatStatus(ch, '🌌 Visão Cósmica!', '#9060d0');
+  discard('p1', _capaceteSelectedIdx);
+  draw('p1', 2, '🌌 Visão Cósmica');
+  render();
+  var cb = _capaceteCallback;
+  _capaceteCallback = null;
+  _capaceteSelectedIdx = null;
+  if (cb) cb();
+}
+
+function _capacetePular() {
+  var ov = document.getElementById('capacete-overlay');
+  ov.style.display = 'none';
+  addLog('🌌 Capacete da Visão Cósmica: efeito ignorado.', 'info');
+  var cb = _capaceteCallback;
+  _capaceteCallback = null;
+  _capaceteSelectedIdx = null;
+  if (cb) cb();
+}
+
+// IA do Vyr'Thas (boss_t3) com capacete: prioridade Ás → Rei → Dama (sem remoção) → ≤3
+function _capaceteIaDiscard(ch, owner) {
+  var hand = G[owner].hand;
+  if (!hand || hand.length === 0) return false;
+  // Prioridade 1: Ás
+  var idx = hand.findIndex(function(c) { return !isSpecial(c) && c.val === 'A'; });
+  // Prioridade 2: Rei
+  if (idx < 0) idx = hand.findIndex(function(c) { return !isSpecial(c) && c.val === 'K'; });
+  // Prioridade 3: Dama — apenas se não tiver efeito de remoção de status ativo
+  if (idx < 0) {
+    var hasRemoval = ch.statuses.some(function(s) { return s.id === 'mirror' || s.id === 'shield'; });
+    if (!hasRemoval) idx = hand.findIndex(function(c) { return !isSpecial(c) && c.val === 'Q'; });
+  }
+  // Prioridade 4: cartas ≤ 3
+  if (idx < 0) idx = hand.findIndex(function(c) { return !isSpecial(c) && c.nv <= 3; });
+
+  if (idx < 0) return false; // nenhuma carta prioritária — não ativa
+
+  var discarded = hand[idx];
+  addLog('🌌 [IA] Capacete da Visão Cósmica: ' + ch.name + ' descarta [' + discarded.val + '] e compra 2!', 'sys');
+  floatStatus(ch, '🌌 Visão Cósmica!', '#9060d0');
+  discard(owner, idx);
+  draw(owner, 2, '🌌 Visão Cósmica');
+  render();
+  return true;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// RODADA — 3 ETAPAS
+// Chamadas em sequência por applyTurnStart.
+// Cada etapa tem responsabilidade clara e registra no Juiz.
+// ══════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════
+// ETAPA 1 — SUB-TICKS
+// Chamados em sequência por tickRoundStart (= rodadaEtapa1).
+// Não rodam em Rodada Extra.
+// ══════════════════════════════════════════════════════════════════
+
+// ── 1. tickDots — DoTs disparam ──────────────────────────────────
+// Retorna false se o personagem morreu por DoT.
+function tickDots(ch) {
+  for(let s of ch.statuses) {
+    if(s.id==='burn') {
+      judgeCheck('dot_apply', { who: ch.name, dot: 'Queimadura', charObj: ch, expected: 10, actual: 10 });
+      dmgChar(ch,10); ch.curDef=Math.max(0,ch.curDef-1);
+      floatStatus(ch,'🔥','#ff6020'); floatDmg(ch,10);
+      addLog('🔥 '+ch.name+' Queimadura: 10 dano (-1 DEF)','dmg');
+    }
+    if(s.id==='bleed') {
+      const bd=3*(s.stacks||1);
+      judgeCheck('dot_apply', { who: ch.name, dot: 'Sangramento', charObj: ch, expected: bd, actual: bd });
+      dmgChar(ch,bd);
+      floatStatus(ch,'🩸','#cc2020'); floatDmg(ch,bd);
+      addLog('🩸 '+ch.name+' Sangramento: '+bd+' dano','dmg');
+
+      // Artefato: Dentes Devoradores de Sanguessuga — cura 1 de vida para quem tiver equipado
+      var _allCombatChars = (G.p1 ? G.p1.chars : []).concat(G.p2 ? G.p2.chars : []);
+      _allCombatChars.forEach(function(ally) {
+        if(!ally.alive) return;
+        var _dentesHasArt = _getCharArtefato(ally.id) === 'art_dentes_sanguessuga';
+        if (!_dentesHasArt && ally.isBoss && window._survBossArtefato && window._survBossArtefato.id === 'art_dentes_sanguessuga') {
+          _dentesHasArt = true;
+        }
+        if(_dentesHasArt) {
+          ally.hp = Math.min(ally.maxHp, ally.hp + 1);
+          floatStatus(ally,'🩸+1','#cc2020');
+          addLog('🩸 Dentes Devoradores: ' + ally.name + ' recupera 1 de vida!','info');
+        }
+      });
+    }
+    if(s.id==='rad') {
+      const rd=4*(s.stacks||1);
+      judgeCheck('dot_apply', { who: ch.name, dot: 'Radiacao', charObj: ch, expected: rd, actual: rd });
+      dmgChar(ch,rd);
+      floatStatus(ch,'☢️','#a0e040'); floatDmg(ch,rd);
+      addLog('☢️ '+ch.name+' Radiação: '+rd+' dano','dmg');
+    }
+    if(s.id==='static') {
+      judgeCheck('dot_apply', { who: ch.name, dot: 'Estatica', charObj: ch, expected: 5, actual: 5 });
+      dmgChar(ch,5);
+      floatStatus(ch,'⚡','#f0f060'); floatDmg(ch,5);
+      addLog('⚡ '+ch.name+' Estática: 5 dano','dmg');
+    }
+    if(s.id==='chill') {
+      judgeCheck('dot_apply', { who: ch.name, dot: 'Resfriamento', charObj: ch, expected: 10, actual: 10 });
+      dmgChar(ch,10); ch.curAtq=Math.max(0,ch.curAtq-1);
+      floatStatus(ch,'🧊','#60c0e0'); floatDmg(ch,10);
+      addLog('🧊 '+ch.name+' Resfriamento: 10 dano (-1 ATQ)','dmg');
+    }
+    if(s.id==='poison') {
+      const pd = s.stacks || 1;
+      judgeCheck('dot_apply', { who: ch.name, dot: 'Veneno', charObj: ch, expected: pd, actual: pd });
+      dmgChar(ch, pd);
+      floatStatus(ch,'☠️','#60c040'); floatDmg(ch, pd);
+      addLog('☠️ '+ch.name+' Veneno: '+pd+' dano ('+pd+' stack'+(pd>1?'s':'')+')','dmg');
+    }
+  }
+  if(G.over) return false;
+  if(!ch.alive) {
+    addLog(`🔍 JUIZ (tickDots): ${ch.name} — morreu por DoT.`, 'sys');
+    G._reactDelay = 0; nextActor(); render();
+    return false;
+  }
+  return true;
+}
+
+// ── 2. tickCooldowns — Decrementa cooldowns das habilidades ──────
+function tickCooldowns(ch) {
+  for(let sk in ch.cooldowns) {
+    if(ch.cooldowns[sk] > 0) ch.cooldowns[sk]--;
+  }
+  const _cdsAtivos = Object.entries(ch.cooldowns).filter(([,v])=>v>0).map(([k,v])=>{
+    const skObj = ch.skills.find(s=>s.id===k);
+    return (skObj?skObj.name:k)+'('+v+'t)';
+  });
+  if(_cdsAtivos.length > 0) {
+    addLog(`🔍 JUIZ (tickCooldowns): ${ch.name} — ${_cdsAtivos.join(', ')}.`, 'sys');
+  }
+}
+
+// ── 3. tickStatusDuration — Decrementa duração dos status ────────
+function tickStatusDuration(ch) {
+  const _antes = ch.statuses.map(s=>s.id);
+  ch.statuses = ch.statuses.filter(s=>{
+    if(s.turns!==undefined) s.turns--;
+    return s.turns===undefined||s.turns>0;
+  });
+  const _expirados = _antes.filter(id=>!ch.statuses.find(s=>s.id===id));
+  if(_expirados.length > 0) {
+    addLog(`🔍 JUIZ (tickStatusDuration): ${ch.name} — expirados: ${_expirados.join(', ')}.`, 'sys');
+  }
+}
+
+// ── 4. tickRoundPassives — Passivas de início de rodada natural ──
+// Recebe (a) para acessar a.extra e a.o.
+// Não dispara em Rodada Extra.
+function tickRoundPassives(a) {
+  const ch = a.ch;
+
+  // Kuro Isamu: Concentração Marcial +1 auto
+  if(((ch.id==='kuro'||ch.id==='kuro_ai')) && ch.alive) {
+    const _satsuiAntes = ch._satsui||0;
+    ch._satsui = Math.min(10, _satsuiAntes + 1);
+    addLog(`🔍 JUIZ (tickRoundPassives): ${ch.name} Concentração Marcial: ${_satsuiAntes} → ${ch._satsui}/10 (auto).`, 'sys');
+  }
+
+  // Tyren: limpa _lingersUntilNextLinkTurn e Roupa Verde regen
+  if((ch.id==='tyre'||ch.id==='tyre_ai')) {
+    ch.statuses = ch.statuses.filter(s => !s._lingersUntilNextLinkTurn);
+    if(ch.statuses.find(s=>s.id==='outfit_verde')) {
+      judgeCheck('passive_start', { who: ch.name, passive: 'Roupa Verde Regen', charObj: ch, extra: false, noExtra: true });
+      const regen=3;
+      ch.hp=Math.min(ch.maxHp,ch.hp+regen);
+      floatAccum(ch,'🟢 +'+regen+' PVS','var(--green)');
+      floatHeal(ch,regen);
+      addLog('🟢 Tyren Roupa Verde: +'+regen+' PVS no início da rodada.','heal');
+    }
+  }
+
+  // Kuro Isamu: Dedicação Total
+  if((ch.id==='kuro'||ch.id==='kuro_ai')) {
+    judgeCheck('passive_start', { who: ch.name, passive: 'Dedicacao Total', charObj: ch, extra: a.extra, noExtra: true });
+    if((ch._ryuSuitTimer||0) > 0) {
+      ch._ryuSuitTimer--;
+      const suitSym = SUITS[ch._ryuSuit]?.sym || ch._ryuSuit;
+      if(ch._ryuSuitTimer > 0) {
+        addLog(`🥋 Dedicação Total: naipe ${ch._ryuSuit} ainda ativo (${ch._ryuSuitTimer}t restantes).`,'info');
+        floatStatus(ch, `🥋 ${suitSym} ${ch._ryuSuitTimer}t`, '#ff8040');
+      } else {
+        addLog(`🥋 Dedicação Total: naipe ${ch._ryuSuit} expira ao final deste turno.`,'info');
+        floatStatus(ch, `🥋 ${suitSym} Expira`, '#808080');
+      }
+    } else {
+      if(a.o === 'p1') { ryuAbrirDedicacaoTotal(ch); }
+      else { ryuIADedicacaoTotal(ch, G.p1.chars.filter(c=>c.alive)); }
+    }
+  }
+
+  // Lorien: Gladiadora Frenesi
+  if((ch.id==='lori'||ch.id==='lori_ai')) {
+    judgeCheck('passive_start', { who: ch.name, passive: 'Gladiadora Frenesi', charObj: ch, extra: a.extra, noExtra: true });
+    const threshold = ch.maxHp * 0.2;
+    const jaTemFrenesi = ch.statuses.find(s=>s.id==='gladiadora_frenesi');
+    if(ch.hp <= threshold) {
+      if(!jaTemFrenesi) {
+        addSt(ch,{id:'gladiadora_frenesi',icon:'⚔️',label:'Gladiadora: Frenesi',turns:999});
+        ch.curAtq = Math.min(ch.curAtq+1, ch.atq+4);
+        ch.curDef = Math.min(ch.curDef+1, ch.def+4);
+        addLog(`⚔️ Gladiadora Frenesi: Lorien luta com fúria! (+1 ATQ/DEF)`,'dmg');
+        floatStatus(ch,'⚔️ FRENESI!','#ff4040');
+      }
+    } else {
+      if(jaTemFrenesi) {
+        ch.statuses = ch.statuses.filter(s=>s.id!=='gladiadora_frenesi');
+        ch.curAtq = Math.max(ch.atq, ch.curAtq - 1);
+        ch.curDef = Math.max(ch.def, ch.curDef - 1);
+        addLog(`⚔️ Gladiadora: Lorien recuperou o fôlego. (Frenesi removido)`,'info');
+      }
+    }
+  }
+
+  // Comandante Vance: Chamado da Tropa
+  if(((ch.id==='vanc'||ch.id==='vanc_ai'))) {
+    judgeCheck('passive_start', { who: ch.name, passive: 'Chamado da Tropa', charObj: ch, extra: a.extra, noExtra: true });
+    ch._chamadoTurno = (ch._chamadoTurno||0) + 1;
+    addLog(`⭐ Comandante Vance — turno ${ch._chamadoTurno}${ch._chamadoTurno%3===0?' → CHAMADO DA TROPA!':'.'}`, 'info');
+    if(ch._chamadoTurno % 3 === 0) {
+      floatStatus(ch,'⭐ CHAMADO!','var(--gold)');
+      chamadoDoComando(ch);
+    } else {
+      floatAccum(ch, '⭐ ' + (ch._chamadoTurno%3) + '/3');
+    }
+  }
+
+  // Nyxar: Presença de Nimb
+  if((ch.id==='nyxa'||ch.id==='nyxa_ai')) {
+    judgeCheck('passive_start', { who: ch.name, passive: 'Presenca de Nimb', charObj: ch, extra: a.extra, noExtra: true });
+    ch._nimb = Math.random() < 0.5;
+    ch._nimbUsedThisTurn = false;
+    if(ch._nimb) {
+      ch._nimbUsedThisTurn = true;
+      addSt(ch,{id:'nimb_ativo',icon:'🪙',label:'Presença de Nimb: próxima ação é Rápida',turns:1});
+      addLog(`🪙 Presença de Nimb! Primeira ação de ${ch.name} será Rápida.`,'info');
+      floatStatus(ch,'🪙 Nimb!','#b060e0');
+    } else {
+      addLog(`🪙 Presença de Nimb: falhou.`,'info');
+    }
+  }
+
+  // Gorath: Agora é Sério — expira
+  if((ch.id==='gora'||ch.id==='gora_ai') && ch._agoraSerio) {
+    judgeCheck('passive_start', { who: ch.name, passive: 'Agora e Serio', charObj: ch, extra: a.extra, noExtra: true });
+    ch._agoraSerioCooldown = (ch._agoraSerioCooldown||0) - 1;
+    if(ch._agoraSerioCooldown <= 0) {
+      ch._agoraSerio = false;
+      ch._agoraSerioPow = 0;
+      ch.statuses = ch.statuses.filter(s=>s.id!=='agora_serio');
+      addLog('⚔️ Agora é Sério expirou — bônus de ATACARRRR removido.','info');
+      floatStatus(ch,'⚔️ Sério: Expiro
