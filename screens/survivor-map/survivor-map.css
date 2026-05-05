@@ -76,4 +76,7 @@
   }
   /* Botões equip/desistir */
   #screen-survivor-map .surv-hp-bar ~ div,
-  #surv-map-content > div:last-child {
+  #surv-map-content > div:last-child {padding: 6px 12px !important;
+    gap: 5px !important;
+  }
+}
