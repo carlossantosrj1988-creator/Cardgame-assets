@@ -1,1 +1,79 @@
+/* ═══════════════════════════════════════════════════════════
+   SURVIVOR MAP — Mapa de fases do modo Survivor
+   ATENÇÃO: arquivo incompleto — termina no meio do último seletor.
+   Será completado no início da Parte 2.
+   ═══════════════════════════════════════════════════════════ */
 
+/* ══ SURVIVOR MAP — LANDSCAPE ══ */
+@media (orientation: landscape) {
+  /* Header da tela survivor */
+  #screen-survivor-map > div > div:first-child {
+    padding: 4px 10px !important;
+  }
+  /* Título da fase */
+  .surv-map-transition {
+    padding: 6px 16px 2px;
+  }
+  .surv-map-title {
+    font-size: clamp(13px, 3.5vw, 18px);
+    letter-spacing: 3px;
+    margin-bottom: 2px;
+  }
+  .surv-map-sub {
+    font-size: 8px;
+    margin-bottom: 2px;
+    letter-spacing: 2px;
+  }
+  /* HP dos personagens */
+  .surv-hp-bar {
+    padding: 0 12px 3px;
+    gap: 5px;
+  }
+  .surv-hp-char {
+    padding: 4px 5px;
+    border-radius: 6px;
+  }
+  .surv-hp-name {
+    font-size: 7px;
+    margin-bottom: 2px;
+  }
+  .surv-hp-wrap {
+    height: 4px;
+  }
+  /* Nodes do caminho */
+  .surv-path-container {
+    padding: 0 12px 4px;
+  }
+  .surv-node-wrap {
+    padding: 1px 0 !important;
+  }
+  .surv-node {
+    width: 34px;
+    height: 34px;
+    font-size: 10px;
+  }
+  .surv-node.current {
+    width: 38px;
+    height: 38px;
+    font-size: 11px;
+  }
+  .surv-node.boss {
+    width: 42px;
+    height: 42px;
+    font-size: 9px;
+    border-width: 2px;
+  }
+  .surv-node.boss.current {
+    width: 46px;
+    height: 46px;
+  }
+  .surv-node-label {
+    font-size: 8px;
+  }
+  /* Linha do caminho */
+  .surv-path-line {
+    width: 2px;
+  }
+  /* Botões equip/desistir */
+  #screen-survivor-map .surv-hp-bar ~ div,
+  #surv-map-content > div:last-child {
