@@ -1,1 +1,41 @@
+/* ═══════════════════════════════════════════════════════════
+   TOPBAR — Barra superior da tela de batalha
+   Turno à esquerda, baralhos no centro, reiniciar à direita
+   ═══════════════════════════════════════════════════════════ */
 
+#screen-game { overflow: hidden; height: 100%; display: none; flex-direction: column; }
+#screen-game.active { display: flex; }
+
+.topbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 10px;
+  height: 36px;
+  display: grid;
+  grid-template-columns: 1fr auto 72px;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+.topbar-turn {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  color: var(--gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-decks {
+  font-size: 10px;
+  color: var(--text2);
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.topbar-restart {
+  display: flex;
+  justify-content: flex-end;
+}
