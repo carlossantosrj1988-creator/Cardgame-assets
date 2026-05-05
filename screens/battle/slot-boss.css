@@ -1,1 +1,12 @@
+/* ═══════════════════════════════════════════════════════════
+   SLOT BOSS — Overrides de tamanho para o boss
+   Boss usa 100×130px (maior que personagem normal de 60×90px)
+   ═══════════════════════════════════════════════════════════ */
 
+.slot-boss { width: 100px !important; max-width: 100px !important; }
+.slot-boss .char-root   { width: 100px; height: 130px; }
+.slot-boss .char-avatar { width: 100px; height: 130px; }
+.slot-boss .char-icons-back { bottom: 130px; }
+.slot-boss .slot-hp-row { width: 100px; }
+.slot-boss .slot-stats-strip { width: 100px; }
+.slot-boss .slot-name { font-size: clamp(7px, 1.9vw, 10px); }
