@@ -1,1 +1,249 @@
+/* ═══════════════════════════════════════════════════════════
+   SLOT — Card de personagem em batalha
+   Sprite vertical 60×90px com coordenadas fixas
+   JS injeta: left, top, width, z-index, transform
+   ═══════════════════════════════════════════════════════════ */
 
+/* ══ SLOT ROOT — NÃO recebe filter/opacity < 1 / transform com scale
+   pois isso criaria stacking context isolando os filhos z-index ══ */
+.slot {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: default;
+  background: transparent;
+  border: none;
+  padding: 0;
+  gap: 0;
+  overflow: visible;
+  transform-origin: center center;
+  /* SEM "transition: filter" aqui — filter vai para .char-avatar */
+  transition: z-index 0s;
+  width: 60px !important;
+  max-width: 60px !important;
+}
+
+/* ══ CHAR-ROOT — contém avatar (90px); ícones saem para cima via absolute ══ */
+.char-root {
+  position: relative;
+  width: 60px;
+  height: 90px;        /* altura fixa = só o avatar, sem deslocar o slot */
+  overflow: visible;   /* permite ícones fluírem para fora do topo */
+}
+
+/* ── Ícones: coluna vertical acima do avatar, ancorados na borda superior ── */
+.char-icons-back {
+  position: absolute;
+  bottom: 90px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  padding-bottom: 3px;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* ── Avatar: ocupa os 90px do char-root ── */
+.char-avatar {
+  position: absolute;
+  top: 0; left: 0;
+  z-index: 2;
+  width: 60px;
+  height: 90px;
+  flex-shrink: 0;
+  overflow: visible;
+  transition: filter 0.25s ease;
+}
+
+/* ── Ícone individual ── */
+.cib-icon {
+  font-size: 13px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px rgba(0,0,0,1));
+  flex-shrink: 0;
+}
+.cib-buff   { opacity: 0.93; }
+.cib-debuff { opacity: 0.88; }
+
+.slot-body { position: relative; z-index: 1; }
+.slot-stats-strip {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 2px 0;
+  gap: 1px;
+  position: relative;
+  z-index: 1;
+}
+.sss-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.sss-lbl { font-size: 5.5px; color: rgba(255,255,255,0.38); letter-spacing: 0.3px; text-transform: uppercase; font-family: 'Cinzel', serif; line-height: 1; }
+.sss-val { font-size: 8px; font-weight: 700; font-family: 'Cinzel', serif; line-height: 1.1; color: rgba(255,255,255,0.75); }
+.sss-val.sss-up   { color: #60e880; text-shadow: 0 0 5px rgba(60,220,80,0.5); }
+.sss-val.sss-down { color: #ff5555; text-shadow: 0 0 5px rgba(255,60,60,0.5); }
+.sss-val.sss-hp   { font-size: 9px; color: rgba(255,255,255,0.90); }
+
+/* ── AVATAR CARD — sprite vertical 60×90px ── */
+.slot-body {
+  width: 60px !important;
+  height: 90px !important;
+  flex-shrink: 0;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,0.09);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: visible;
+  background: linear-gradient(165deg,
+    rgba(255,255,255,0.07) 0%,
+    rgba(20,28,50,0.60) 55%,
+    rgba(0,0,0,0.50) 100%
+  );
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+/* Sombra elíptica no chão — dá volume ao sprite */
+.slot-body::after {
+  content: '';
+  position: absolute;
+  bottom: -8px; left: 8%; right: 8%;
+  height: 10px;
+  background: radial-gradient(ellipse 80% 100% at 50% 0%,
+    rgba(0,0,0,0.55) 0%, transparent 100%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ── SUIT SYMBOL — "arte" do personagem ── */
+.slot-suit {
+  font-size: clamp(30px, 8vw, 56px);
+  line-height: 1;
+  filter: drop-shadow(0 3px 12px currentColor);
+  margin-top: 4px;
+  position: relative;
+  z-index: 2;
+}
+
+.sprite-img { pointer-events:none; object-fit:contain; transition: opacity 0.08s ease; }
+
+/* ═══ HAS-SPRITE: limpa visual do card para chars com sprite ═══ */
+.has-sprite .slot-body {
+  background:none !important; border:none !important; box-shadow:none !important;
+  overflow:visible !important; border-radius:0 !important;
+}
+.has-sprite .slot-body::after { display:none !important; }
+.has-sprite .slot-suit { font-size:0 !important; line-height:0 !important; margin:0 !important; filter:none !important; }
+.has-sprite .char-avatar { background:none !important; }
+
+/* Nome + naipe para sprites — aparece abaixo do sprite, fora do slot-body */
+.has-sprite .slot-name {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none !important;
+  padding: 3px 2px 1px !important;
+  position: relative !important;
+  bottom: auto !important; left: auto !important; right: auto !important;
+  font-size: 8px !important;
+  font-family: 'Cinzel', serif;
+  color: rgba(255,255,255,0.88);
+  text-shadow: 0 1px 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.9);
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+}
+
+/* Barra de HP melhorada para sprites */
+.has-sprite .slot-hp-row {
+  padding: 1px 0 0;
+}
+.has-sprite .hp-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.7);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+}
+.has-sprite .hp-fill {
+  border-radius: 3px;
+}
+.has-sprite .hp-txt {
+  font-size: 7.5px;
+  color: rgba(255,255,255,0.7);
+}
+
+/* Stats strip para sprites — levemente maior */
+.has-sprite .sss-lbl { font-size: 5px; }
+.has-sprite .sss-val { font-size: 7.5px; }
+
+/* Sprites com diferentes tamanhos de uso */
+.sprite-slot   { width:80px; height:80px; display:block; filter:drop-shadow(0 2px 8px rgba(0,0,0,0.8)); }
+.sprite-select { width:48px; height:48px; display:block; margin:2px auto; filter:drop-shadow(0 2px 6px rgba(0,0,0,0.7)); }
+.sprite-detail { width:80px; height:80px; display:block; margin:0 auto; filter:drop-shadow(0 2px 10px rgba(0,0,0,0.7)); }
+
+/* ── NAME TAG ── */
+.slot-name {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: linear-gradient(0deg, rgba(0,0,0,0.96) 0%, transparent 100%);
+  padding: 16px 3px 4px;
+  font-family: 'Cinzel', serif;
+  font-size: clamp(6px, 1.7vw, 9px);
+  text-align: center;
+  line-height: 1.2;
+  color: #ddd;
+  z-index: 2;
+}
+
+/* HP bar row — sits tight below the avatar */
+.slot-hp-row {
+  width: 100%;
+  padding: 3px 1px 0;
+  position: relative;
+  z-index: 1;
+}
+.hp-wrap { width: 100%; }
+.hp-txt { display:flex; justify-content:space-between; font-size:8px; font-family:'Cinzel',serif; font-weight:700; padding:1px 0 0; line-height:1; }
+.hp-bar {
+  height: 5px;
+  background: rgba(0,0,0,0.6);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+.hp-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease, background 0.3s; }
+.hp-shield-layer { position:absolute; top:0; left:0; height:100%; border-radius:2px; background:linear-gradient(90deg,rgba(60,140,255,0.3),rgba(100,180,255,0.85)); pointer-events:none; }
+
+/* Shield value badge below HP bar */
+.slot-shield-val {
+  font-size: 7px;
+  color: #55bbff;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* Stats — hidden by default, shown in charDetail press */
+.slot-stats { display: none; }
+.st { display: flex; flex-direction: column; align-items: center; }
+.st-l { font-size: 6px; color: var(--text2); text-transform: uppercase; }
+.st-v { font-weight: 700; font-size: 9px; }
+
+/* Tap hint */
+.tap-act { font-size: 7px; color: var(--gold); text-align: center; animation: blink 1.2s infinite; margin-top: 1px; }
+
+/* Suit advantage mini label top-left of sprite */
+.slot-adv-lbl { font-size: 7px; }
+
+/* Dead — slot some completamente após o fadeout */
+.slot.dead { display: none !impor
