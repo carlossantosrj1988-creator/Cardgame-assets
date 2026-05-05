@@ -1,1 +1,670 @@
+/* ═══════════════════════════════════════════════════════════
+   CHAR PANEL — Tela detalhada do personagem
+   Layout 3 colunas: lista | destaque | painéis
+   ═══════════════════════════════════════════════════════════ */
 
+/* Container principal */
+.cp-wrap {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(6,8,14,0.72), rgba(6,8,14,0.72)),
+    url('https://raw.githubusercontent.com/carlossantosrj1988-creator/Cardgame-assets/main/cenario/selecao/selecao.jpg') center 30%/cover no-repeat;
+}
+
+/* ── COLUNA ESQUERDA — lista de ícones 2x3 ── */
+.cp-left {
+  width: 76px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(6,8,14,0.75);
+  border-right: 1px solid var(--border);
+  padding: 3px;
+  gap: 3px;
+}
+
+.cp-icon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  flex: 1;
+}
+
+.cp-icon {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  min-height: 48px;
+}
+
+.cp-icon:active { transform: scale(0.94); }
+
+.cp-icon.cp-icon-sel {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.15);
+  box-shadow: 0 0 6px rgba(201,168,76,0.3);
+}
+
+.cp-icon.cp-icon-locked {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.cp-icon.cp-icon-locked:active { transform: scale(0.94); }
+
+.cp-icon-name {
+  font-family: 'Cinzel', serif;
+  font-size: 6px;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.2;
+  letter-spacing: 0.3px;
+}
+
+.cp-icon-price {
+  font-size: 6px;
+  color: var(--gold);
+  text-align: center;
+}
+
+/* Paginação esquerda */
+.cp-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+  flex-shrink: 0;
+}
+
+.cp-page-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--gold);
+  font-size: 14px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.cp-page-btn:active { transform: scale(0.92); background: rgba(201,168,76,0.1); }
+.cp-page-btn:disabled { opacity: 0.25; pointer-events: none; }
+
+.cp-page-info {
+  font-size: 8px;
+  color: var(--text2);
+  font-family: 'Cinzel', serif;
+  text-align: center;
+  flex: 1;
+}
+
+/* ── COLUNA CENTRO — herói em destaque ── */
+.cp-center {
+  flex: 1;
+  max-width: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.cp-center-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center 60%, rgba(201,168,76,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cp-sprite-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+}
+
+.cp-sprite-wrap.cp-locked-hero {
+  filter: grayscale(1) brightness(0.5);
+}
+
+.cp-hero-name {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  color: var(--gold);
+  text-align: center;
+  letter-spacing: 1.5px;
+  line-height: 1.3;
+  text-shadow: 0 0 12px rgba(201,168,76,0.4);
+}
+
+.cp-hero-namerow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.cp-hero-sub {
+  font-size: 9px;
+  color: var(--text2);
+  text-align: center;
+  letter-spacing: 0.5px;
+  margin-top: 1px;
+}
+
+.cp-hero-suit {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.cp-hero-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+/* Botão selecionar */
+.cp-btn-select {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(90,200,128,0.2), rgba(30,80,50,0.3));
+  border: 1px solid rgba(90,200,128,0.5);
+  border-radius: 8px;
+  color: #5ac880;
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.cp-btn-select:active { transform: scale(0.97); background: rgba(90,200,128,0.25); }
+
+/* Botão comprar */
+.cp-btn-buy {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(100,80,20,0.3));
+  border: 1px solid rgba(201,168,76,0.5);
+  border-radius: 8px;
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.cp-btn-buy:active { transform: scale(0.97); }
+
+.cp-price-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  margin-top: 4px;
+}
+/* ── COLUNA DIREITA — painéis paginados ── */
+.cp-right {
+  width: 170px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(6,8,14,0.78);
+  border-left: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* Header das abas */
+.cp-tabs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 4px 4px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.cp-tab-label {
+  font-family: 'Cinzel', serif;
+  font-size: 8px;
+  color: var(--gold);
+  letter-spacing: 1px;
+  text-align: center;
+  flex: 1;
+}
+
+.cp-tab-arrow {
+  background: none;
+  border: none;
+  color: var(--gold);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.cp-tab-arrow:active { opacity: 1; transform: scale(0.9); }
+.cp-tab-arrow:disabled { opacity: 0.2; pointer-events: none; }
+
+/* Conteúdo das abas */
+.cp-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Scrollbar invisível mas funcional */
+.cp-tab-content::-webkit-scrollbar { width: 2px; }
+.cp-tab-content::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius: 2px; }
+
+/* ── ABA STATUS ── */
+.cp-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 4px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 5px;
+  border-left: 2px solid transparent;
+}
+
+.cp-stat-row.cp-stat-bonus {
+  border-left-color: var(--gold);
+  background: rgba(201,168,76,0.06);
+}
+
+.cp-stat-label {
+  font-size: 8px;
+  color: var(--text2);
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.5px;
+}
+
+.cp-stat-val {
+  font-size: 9px;
+  color: var(--text);
+  font-family: 'Cinzel', serif;
+}
+
+.cp-stat-bonus-val {
+  font-size: 8px;
+  color: var(--gold);
+}
+
+.cp-section-title {
+  font-family: 'Cinzel', serif;
+  font-size: 7px;
+  color: var(--gold);
+  letter-spacing: 1px;
+  opacity: 0.7;
+  margin-top: 4px;
+  border-bottom: 1px solid rgba(201,168,76,0.15);
+  padding-bottom: 2px;
+}
+
+.cp-passive-item {
+  background: rgba(255,255,255,0.03);
+  border-radius: 5px;
+  padding: 4px 5px;
+  border-left: 2px solid rgba(150,100,255,0.4);
+}
+
+.cp-passive-name {
+  font-size: 7.5px;
+  color: #b090ff;
+  font-family: 'Cinzel', serif;
+  margin-bottom: 1px;
+}
+
+.cp-passive-desc {
+  font-size: 7px;
+  color: var(--text2);
+  line-height: 1.4;
+}
+
+.cp-skill-item {
+  background: rgba(255,255,255,0.03);
+  border-radius: 5px;
+  padding: 4px 5px;
+  border-left: 2px solid rgba(80,180,255,0.4);
+}
+
+.cp-skill-name {
+  font-size: 7.5px;
+  color: #50b4ff;
+  font-family: 'Cinzel', serif;
+  margin-bottom: 1px;
+}
+
+.cp-skill-desc {
+  font-size: 7px;
+  color: var(--text2);
+  line-height: 1.4;
+}
+
+/* ── ABA EQUIPAMENTOS ── */
+.cp-equip-slot {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cp-equip-slot-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cp-equip-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.cp-equip-name {
+  font-family: 'Cinzel', serif;
+  font-size: 7.5px;
+  color: var(--text);
+  line-height: 1.3;
+  flex: 1;
+}
+
+.cp-equip-level {
+  font-size: 8px;
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+}
+
+.cp-equip-desc {
+  font-size: 7px;
+  color: var(--text2);
+  line-height: 1.4;
+}
+
+.cp-equip-bonus {
+  font-size: 7px;
+  color: var(--gold);
+  background: rgba(201,168,76,0.08);
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+.cp-equip-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 0;
+  opacity: 0.4;
+}
+
+.cp-equip-empty-icon {
+  font-size: 18px;
+}
+
+.cp-equip-empty-txt {
+  font-size: 7px;
+  color: var(--text2);
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.5px;
+}
+
+/* Botões de ação equip/artefato */
+.cp-action-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.cp-btn-action {
+  width: 100%;
+  border-radius: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 7px;
+  letter-spacing: 0.8px;
+  padding: 5px 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid;
+  text-align: center;
+}
+
+.cp-btn-action:active { transform: scale(0.96); }
+
+.cp-btn-trocar {
+  background: rgba(201,168,76,0.1);
+  border-color: rgba(201,168,76,0.4);
+  color: var(--gold);
+}
+
+.cp-btn-desequipar {
+  background: rgba(180,60,60,0.1);
+  border-color: rgba(180,60,60,0.35);
+  color: #d46060;
+}
+
+.cp-btn-equipar {
+  background: rgba(90,200,128,0.1);
+  border-color: rgba(90,200,128,0.4);
+  color: #5ac880;
+}
+
+/* ── ABA ARTEFATOS ── */
+.cp-artef-slot {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cp-artef-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--bg3);
+  border: 1px solid rgba(150,100,255,0.3);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.cp-artef-name {
+  font-family: 'Cinzel', serif;
+  font-size: 7.5px;
+  color: #b090ff;
+  line-height: 1.3;
+  flex: 1;
+}
+
+.cp-artef-desc {
+  font-size: 7px;
+  color: var(--text2);
+  line-height: 1.4;
+}
+
+/* ── EMPTY STATE geral ── */
+.cp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 8px;
+  opacity: 0.5;
+  text-align: center;
+}
+
+.cp-empty-icon { font-size: 22px; }
+.cp-empty-txt {
+  font-size: 8px;
+  color: var(--text2);
+  font-family: 'Cinzel', serif;
+  line-height: 1.4;
+  }
+/* ── LANDSCAPE — CharPanel expande para largura total ── */
+@media (orientation: landscape) {
+  /* Coluna esquerda — 2×3 ícones, cabe na altura da tela */
+  .cp-left {
+    width: 120px;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .cp-icon-grid {
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+    align-items: start;
+  }
+  .cp-icon {
+    min-height: 44px;
+    max-height: none;
+    padding: 3px;
+  }
+  .cp-pagination {
+    flex-shrink: 0;
+    padding: 4px 2px;
+  }
+  .cp-page-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+
+  /* Coluna centro — sprite solto, sem gradiente */
+  .cp-center {
+    flex: 1.2;
+    max-width: none;
+    overflow: visible;
+  }
+  .cp-center-bg {
+    background: linear-gradient(
+      to bottom,
+      transparent 40%,
+      rgba(6,8,14,0.82) 100%
+    );
+  }
+  .cp-sprite-wrap > div {
+    border-radius: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+  .cp-sprite-wrap > div > img {
+    object-fit: contain !important;
+    width: 140px !important;
+    height: 140px !important;
+  }
+  .cp-hero-name {
+    font-size: 14px;
+  }
+  .cp-hero-namerow {
+    gap: 8px;
+  }
+  .cp-hero-suit {
+    font-size: 16px;
+  }
+  .cp-btn-select,
+  .cp-btn-buy {
+    font-size: 10px;
+    padding: 12px 8px;
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+
+  /* Coluna direita — mais larga, fontes maiores */
+  .cp-right {
+    width: 260px;
+    flex-shrink: 0;
+  }
+  .cp-tab-label {
+    font-size: 11px;
+  }
+  .cp-tab-arrow {
+    font-size: 20px;
+  }
+  .cp-stat-label {
+    font-size: 10px;
+  }
+  .cp-stat-val {
+    font-size: 12px;
+  }
+  .cp-section-title {
+    font-size: 10px;
+  }
+  .cp-passive-name,
+  .cp-skill-name {
+    font-size: 11px;
+  }
+  .cp-passive-desc,
+  .cp-skill-desc {
+    font-size: 9px;
+  }
+  .cp-equip-name,
+  .cp-artef-name {
+    font-size: 9px;
+  }
+  .cp-equip-desc,
+  .cp-artef-desc {
+    font-size: 8px;
+  }
+  .cp-equip-icon,
+  .cp-artef-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+}
